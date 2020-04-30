@@ -40,6 +40,9 @@ RESZP	tempPtrD,			$02
 
 RESZP	gameLoopFlag,		$01	; 0 while game is running, 1 while spinning
 
+RESZP	player1Buttons,		$01
+RESZP	player2Buttons,		$01
+
 .segment "STACK"
 
 .segment "OAM"

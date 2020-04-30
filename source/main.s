@@ -95,11 +95,51 @@ reset:
 	cli				; Enable interrupts
 
 gameLoop:
-	lda tempC		; Temporary counter for scrolling sprite
-	adc #$01
-	sta tempC
+readJoypads:			; Adapated from wiki.nesdev.com
+	lda #$01
+	sta JOYPAD1			; Set strobe bit
+	sta player2Buttons	; Use Player 2's buttons as a ring counter
+	lsr	a				; Now A = 0
+	sta JOYPAD1			; Clear strobe bit - joypad's shift registers now set
+@loop:
+	lda JOYPAD1
+	lsr a				; Bit 0 -> carry
+	rol player1Buttons	; Carry -> bit 0, bit 7 -> carry
+	lda JOYPAD2
+	lsr a
+	rol player2Buttons
+	bcc @loop			; Exit once the initial $01 we set has been shifted out
 
-	lda #$10		; Scrolling sprite test, top-left
+tempScrollingSprite:	; Not optimal, could shift right and check carry flag
+	lda player1Buttons
+	and #BUTTON_LEFT
+	beq @checkRight
+		lda tempC
+		sbc #$01
+		sta tempC
+@checkRight:
+	lda player1Buttons
+	and #BUTTON_RIGHT
+	beq @checkUp
+		lda tempC
+		adc #$01
+		sta tempC
+@checkUp:
+	lda player1Buttons
+	and #BUTTON_UP
+	beq @checkDown
+		lda tempD
+		sbc #$01
+		sta tempD
+@checkDown:
+	lda player1Buttons
+	and #BUTTON_DOWN
+	beq @drawSprite
+		lda tempD
+		adc #$01
+		sta tempD
+@drawSprite:
+	lda tempD		; Scrolling sprite test, top-left
 	sta oamBuffer+0
 	lda #$00
 	sta oamBuffer+1
@@ -107,7 +147,7 @@ gameLoop:
 	lda tempC
 	sta oamBuffer+3
 	
-	lda #$10		; Scrolling sprite test, top-right
+	lda tempD		; Scrolling sprite test, top-right
 	sta oamBuffer+4
 	lda #$01
 	sta oamBuffer+5
@@ -117,7 +157,8 @@ gameLoop:
 	adc #$08
 	sta oamBuffer+7
 	
-	lda #$18		; Scrolling sprite test, bottom-left
+	lda tempD		; Scrolling sprite test, bottom-left
+	adc #$08
 	sta oamBuffer+8
 	lda #$02
 	sta oamBuffer+9
@@ -126,7 +167,8 @@ gameLoop:
 	lda tempC
 	sta oamBuffer+11
 	
-	lda #$18		; Scrolling sprite test, top-right
+	lda tempD		; Scrolling sprite test, top-right
+	adc #$08
 	sta oamBuffer+12
 	lda #$03
 	sta oamBuffer+13

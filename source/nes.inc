@@ -40,4 +40,14 @@ APUFRAME		= $4017	; Write-only
 JOYPAD1			= $4016
 JOYPAD2			= $4017
 
+; Ordered the same way they are polled from the controller, MSB first
+BUTTON_A		= $80
+BUTTON_B		= $40
+BUTTON_SELECT	= $20
+BUTTON_START	= $10
+BUTTON_UP		= $08
+BUTTON_DOWN		= $04
+BUTTON_LEFT		= $02
+BUTTON_RIGHT	= $01
+
 ; EOF
