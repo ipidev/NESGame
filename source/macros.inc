@@ -5,20 +5,20 @@
 .define MACROS_INC
 
 .macro ALIAS alias, original
-	.if !.defined(alias)
-		alias = original
-	.endif
+    .if !.defined(alias)
+        alias = original
+    .endif
 .endmacro
 
 .macro SWAP_NIBBLES
-	asl
-	adc #$80
-	rol
-	asl
-	adc #$80
-	rol
+    asl
+    adc #$80
+    rol
+    asl
+    adc #$80
+    rol
 .endmacro
 
-.endif	; MACROS_INC
+.endif  ; MACROS_INC
 
 ; EOF

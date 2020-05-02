@@ -43,37 +43,37 @@ SPACE := $(EMPTY) $(EMPTY)
 all : directories $(GAME)
 
 $(GAME) : $(HEADER_BIN) $(PRG_BIN) $(CHR_BIN)
-	$(COPY) $(subst $(SPACE),+,$^) $(GAME).nes
+    $(COPY) $(subst $(SPACE),+,$^) $(GAME).nes
 
 $(HEADER_BIN) : $(HEADER_OBJ)
-	$(LD65) -o $@ -C $(HEADER_CFG) $^
+    $(LD65) -o $@ -C $(HEADER_CFG) $^
 
 $(CHR_BIN) : $(CHR_OBJ)
-	$(LD65) -o $@ -C $(CHR_CFG) $^
+    $(LD65) -o $@ -C $(CHR_CFG) $^
 
 $(PRG_BIN) : $(OBJECTS) $(GLOBALS_OBJECTS)
-	$(LD65) -o $@ -C $(PRG_CFG) $^
+    $(LD65) -o $@ -C $(PRG_CFG) $^
 
 $(GLOBALS_OBJECTS) : $(GLOBALS)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -D EXPORT_GLOBALS -o $@
+    $(CA65) $(notdir $(subst .o,.s,$@)) -g -D EXPORT_GLOBALS -o $@
 
 $(HEADER_OBJ) : $(HEADER)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -o $@
+    $(CA65) $(notdir $(subst .o,.s,$@)) -g -o $@
 
 $(CHR_OBJ) : $(CHR)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -o $@
+    $(CA65) $(notdir $(subst .o,.s,$@)) -g -o $@
 
 $(OBJECTS) : $(SOURCES)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -o $@
+    $(CA65) $(notdir $(subst .o,.s,$@)) -g -o $@
 
 # Make build directory if it doesn't exist
 .PHONY: directories
 directories : $(BUILD_DIR)
 
 $(BUILD_DIR) :
-	$(MKDIR) $(BUILD_DIR)
+    $(MKDIR) $(BUILD_DIR)
 
 # Clean
 .PHONY: clean
 clean:
-	del $(BUILD_DIR)\*.o $(BUILD_DIR)\*.bin
+    del $(BUILD_DIR)\*.o $(BUILD_DIR)\*.bin
