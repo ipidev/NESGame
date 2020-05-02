@@ -1,6 +1,9 @@
 ; nes.inc
 ; Sean Latham, 2020
 
+.if !.defined(NES_INC)
+.define NES_INC
+
 PPUCTRL         = $2000
 PPUMASK         = $2001
 PPUSTATUS       = $2002
@@ -49,5 +52,7 @@ BUTTON_UP       = $08
 BUTTON_DOWN     = $04
 BUTTON_LEFT     = $02
 BUTTON_RIGHT    = $01
+
+.endif  ; NES_INC
 
 ; EOF

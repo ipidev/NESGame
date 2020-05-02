@@ -1,9 +1,6 @@
 ; global.s
 ; Sean Latham, 2020
 
-.if !.defined(GLOBAL_S)
-.define GLOBAL_S
-
 ; Import/export RAM symbol macro originally by Brad Smith
 .macro RESZP label, size
     .ifdef EXPORT_GLOBALS
@@ -42,6 +39,10 @@ RESZP   gameLoopFlag,       $01 ; 0 while game is running, 1 while spinning
 
 RESZP   player1Buttons,     $01
 RESZP   player2Buttons,     $01
+RESZP   player1XHi,         $01
+RESZP   player1XLo,         $01
+RESZP   player1YHi,         $01
+RESZP   player1YLo,         $01
 
 .segment "STACK"
 
@@ -50,7 +51,5 @@ RESZP   player2Buttons,     $01
 RES     oamBuffer,          $100
 
 .segment "RAM"
-
-.endif  ; GLOBAL_S
 
 ; EOF

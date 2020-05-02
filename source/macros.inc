@@ -19,6 +19,11 @@
     rol
 .endmacro
 
+.macro EXPORT_LABEL label
+    label:
+    .export label
+.endmacro
+
 .endif  ; MACROS_INC
 
 ; EOF

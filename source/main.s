@@ -3,7 +3,6 @@
 
 .include "nes.inc"
 .include "global.s"
-.include "player.s"
 
 .segment "TEXT"
 
@@ -111,71 +110,45 @@ readJoypads:            ; Adapated from wiki.nesdev.com
     rol player2Buttons
     bcc @loop           ; Exit once the initial $01 we set has been shifted out
 
-tempScrollingSprite:    ; Not optimal, could shift right and check carry flag
-    lda player1Buttons
-    and #BUTTON_LEFT
-    beq @checkRight
-        lda tempC
-        sbc #$01
-        sta tempC
-@checkRight:
-    lda player1Buttons
-    and #BUTTON_RIGHT
-    beq @checkUp
-        lda tempC
-        adc #$01
-        sta tempC
-@checkUp:
-    lda player1Buttons
-    and #BUTTON_UP
-    beq @checkDown
-        lda tempD
-        sbc #$01
-        sta tempD
-@checkDown:
-    lda player1Buttons
-    and #BUTTON_DOWN
-    beq @drawSprite
-        lda tempD
-        adc #$01
-        sta tempD
-@drawSprite:
-    lda tempD       ; Scrolling sprite test, top-left
+    jsr handlePlayerMovement
+    
+drawSprite:
+    lda player1YHi       ; Scrolling sprite test, top-left
     sta oamBuffer+0
     lda #$00
     sta oamBuffer+1
     sta oamBuffer+2
-    lda tempC
+    lda player1XHi
     sta oamBuffer+3
     
-    lda tempD       ; Scrolling sprite test, top-right
+    lda player1YHi       ; Scrolling sprite test, top-right
     sta oamBuffer+4
     lda #$01
     sta oamBuffer+5
     lda #$00
     sta oamBuffer+6
-    lda tempC
+    lda player1XHi
     adc #$08
     sta oamBuffer+7
     
-    lda tempD       ; Scrolling sprite test, bottom-left
+    lda player1YHi       ; Scrolling sprite test, bottom-left
     adc #$08
     sta oamBuffer+8
     lda #$02
     sta oamBuffer+9
     lda #$00
     sta oamBuffer+10
-    lda tempC
+    lda player1XHi
     sta oamBuffer+11
     
-    lda tempD       ; Scrolling sprite test, top-right
+    lda player1YHi       ; Scrolling sprite test, top-right
     adc #$08
     sta oamBuffer+12
     lda #$03
     sta oamBuffer+13
     lda #$00
     sta oamBuffer+14
-    lda tempC
+    lda player1XHi
     adc #$08
     sta oamBuffer+15
 
