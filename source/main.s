@@ -110,11 +110,14 @@ readJoypads:            ; Adapated from wiki.nesdev.com
     rol player2Buttons
     bcc @loop           ; Exit once the initial $01 we set has been shifted out
 
-    jsr updatePlayerState
+    jsr updatePlayerState       ; Will eventually need consolidating
     jsr handlePlayerMovement
     
 drawSprite:
     ldy player1AnimIndex ; TODO: MOVE THIS!!
+    lda PLAYER_ANIMATION_INDICES, y
+    and #$7F
+    tay
     
     lda player1YHi       ; Scrolling sprite test, top-left
     sta oamBuffer+0

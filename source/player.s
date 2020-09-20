@@ -42,7 +42,28 @@ EXPORT_LABEL METASPRITE_BR
     .byte PLAYER_SPRITE_START + $0B ; Facing up, standing
     .byte PLAYER_SPRITE_START + $0A ; Facing up, stepping
 
+; 2D array of walk animation indices per direction. Slightly awkward data layout
+; but makes maths quicker. Sprite is horizontal flipped if MSB set
+EXPORT_LABEL PLAYER_ANIMATION_INDICES
+    .byte $00, $80, $02, $04    ; Frame 0
+    .byte $01, $81, $03, $05    ; Frame 1
+    .byte $00, $80, $02, $04    ; Frame 2
+    .byte $01, $81, $83, $85    ; Frame 3
+        ; Rite Left Down Up
+
 PLAYER_MOVE_SPEED = $0180
+
+.enum PlayerState
+    IDLE
+    WALKING
+.endenum
+
+.enum PlayerFacing
+    RIGHT
+    LEFT
+    DOWN
+    UP
+.endenum
 
 .segment "CODE"
 
@@ -51,32 +72,27 @@ EXPORT_LABEL updatePlayerState
     lda player1Buttons      ; Check if the player is moving
     and #BUTTON_LEFT | BUTTON_RIGHT | BUTTON_DOWN | BUTTON_UP
     beq @setStandingState
-        lda player1State
-        cmp #$01            ; Could also handle button input here?
-        bne @updateWalkingAnimIndex
-            lda #$01
+        lda #PlayerState::WALKING   ; Load immediate, compare with memory
+        cmp player1State            ; If not already walking, value is instantly
+        bne @updateWalkingAnimIndex ; written - saves 2 cycles and 2 bytes :^>
             sta player1State
-            lda #$00
+            lda #$0C                ; Take first step a bit sooner
             sta player1StateTimer
-@updateWalkingAnimIndex:    ; TODO: maybe need anim indices arrays?
+@updateWalkingAnimIndex:
         lda player1StateTimer
-        and #$08
-        beq @setSecondWalkingFrame
-            lda #$00
-            sta player1AnimIndex
-            jmp @exit
-@setSecondWalkingFrame:
-            lda #$01
-            sta player1AnimIndex
-            jmp @exit
+        and #%00011000  ; LSB must be 0 to avoid carry bit affecting addition
+        clc
+        lsr                 ; Now bits 2+3 hold animation frame index
+        adc player1Facing
+        sta player1AnimIndex
+        rts
 @setStandingState:
         lda player1State
         bne @exit
-            lda #$00
+            lda #PlayerState::IDLE
             sta player1State
             sta player1StateTimer
             sta player1AnimIndex
-
 @exit:
     rts
 
@@ -84,6 +100,8 @@ EXPORT_LABEL handlePlayerMovement
     lda player1Buttons
     and #BUTTON_RIGHT
     beq @checkLeft
+        lda #PlayerFacing::RIGHT
+        sta player1Facing
         clc
         lda player1XLo
         adc #<PLAYER_MOVE_SPEED
@@ -95,6 +113,8 @@ EXPORT_LABEL handlePlayerMovement
     lda player1Buttons
     and #BUTTON_LEFT
     beq @checkDown
+        lda #PlayerFacing::LEFT
+        sta player1Facing
         sec
         lda player1XLo
         sbc #<PLAYER_MOVE_SPEED
@@ -106,6 +126,8 @@ EXPORT_LABEL handlePlayerMovement
     lda player1Buttons
     and #BUTTON_DOWN
     beq @checkUp
+        lda #PlayerFacing::DOWN
+        sta player1Facing
         clc
         lda player1YLo
         adc #<PLAYER_MOVE_SPEED
@@ -117,6 +139,8 @@ EXPORT_LABEL handlePlayerMovement
     lda player1Buttons
     and #BUTTON_UP
     beq @exit
+        lda #PlayerFacing::UP
+        sta player1Facing
         sec
         lda player1YLo
         sbc #<PLAYER_MOVE_SPEED
