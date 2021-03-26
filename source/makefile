@@ -1,13 +1,16 @@
 # NROM makefile
 # Sean Latham, 2019
 
-GAME = ..\game
+GAME_NAME = game.nes
+GAME_DIR = ..
+GAME = $(GAME_DIR)\$(GAME_NAME)
 
 # Command references
 CA65 = ca65
 LD65 = ld65
 MKDIR = mkdir
 COPY = copy /b
+PYTHON = python
 
 # Directories
 BUILD_DIR = ..\build
@@ -33,6 +36,7 @@ CHR_BIN = $(BUILD_DIR)\$(CHR:.s=.bin)
 
 PRG_CFG = prg.cfg
 PRG_BIN = $(BUILD_DIR)\$(PRG_CFG:.cfg=.bin)
+PRG_LABELS = $(BUILD_DIR)\$(PRG_CFG:.cfg=.labels.txt)
 
 # Support for string substitution
 EMPTY :=
@@ -42,8 +46,8 @@ SPACE := $(EMPTY) $(EMPTY)
 .PHONY: all
 all : directories $(GAME)
 
-$(GAME) : $(HEADER_BIN) $(PRG_BIN) $(CHR_BIN)
-	$(COPY) $(subst $(SPACE),+,$^) $(GAME).nes
+$(GAME) : $(HEADER_BIN) $(PRG_BIN) $(CHR_BIN) FCEUX_SYMBOLS
+	$(COPY) $(subst $(SPACE),+,$^) $(GAME)
 
 $(HEADER_BIN) : $(HEADER_OBJ)
 	$(LD65) -o $@ -C $(HEADER_CFG) $^
@@ -52,7 +56,10 @@ $(CHR_BIN) : $(CHR_OBJ)
 	$(LD65) -o $@ -C $(CHR_CFG) $^
 
 $(PRG_BIN) : $(OBJECTS) $(GLOBALS_OBJECTS)
-	$(LD65) -o $@ -C $(PRG_CFG) $^
+	$(LD65) -o $@ -C $(PRG_CFG) $^ -Ln $(PRG_LABELS)
+
+FCEUX_SYMBOLS : $(PRG_BIN)
+	$(PYTHON) exportFCEUXsymbols.py $(PRG_LABELS) $(GAME)
 
 $(GLOBALS_OBJECTS) : $(GLOBALS)
 	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U -D EXPORT_GLOBALS -o $@
@@ -76,4 +83,5 @@ $(BUILD_DIR) :
 # Clean
 .PHONY: clean
 clean:
-	del $(BUILD_DIR)\*.o $(BUILD_DIR)\*.bin
+	del $(BUILD_DIR)\*.o $(BUILD_DIR)\*.bin $(BUILD_DIR)\*.labels.txt
+	del $(GAME_DIR)\*.nl

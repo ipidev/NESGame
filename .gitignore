@@ -3,3 +3,4 @@ build/*
 *.nes
 *.deb
 *.o
+*.nl
