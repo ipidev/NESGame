@@ -31,7 +31,7 @@ EXPORT_LABEL PLAYER_METASPRITE_BR
     .byte PLAYER_PATTERN_START + $0B ; Stretched
 
 PLAYER_ACCELERATION = $00C0
-PLAYER_TOP_RIGHT_SPEED = $0280
+PLAYER_TOP_RIGHT_SPEED = $0200
 PLAYER_TOP_LEFT_SPEED = ~PLAYER_TOP_RIGHT_SPEED + 1
 
 .enum PlayerState
@@ -65,10 +65,22 @@ EXPORT_LABEL handlePlayerMovement
         lda player1XSpeedHi
         adc #>PLAYER_ACCELERATION
         sta player1XSpeedHi
+        lda player1XSpeedLo             ; Check if speed now exceeds maximum
+        cmp #<PLAYER_TOP_RIGHT_SPEED    ; Sets carry flag for next SBC
+        lda player1XSpeedHi
+        sbc #>PLAYER_TOP_RIGHT_SPEED
+        bvc :+              ; N eor V
+            eor #$80
+:       bmi @postHandleInput
+            lda #<PLAYER_TOP_RIGHT_SPEED
+            sta player1XSpeedLo
+            lda #>PLAYER_TOP_RIGHT_SPEED
+            sta player1XSpeedHi
+            bne @postHandleInput        ; Should be guaranteed branch
 @checkLeft:
     lda player1Buttons
     and #BUTTON_LEFT
-    beq @postHandleInput
+    beq @handleNoInput
         lda #PlayerFacing::LEFT
         sta player1Facing
         sec
@@ -78,6 +90,48 @@ EXPORT_LABEL handlePlayerMovement
         lda player1XSpeedHi
         sbc #>PLAYER_ACCELERATION
         sta player1XSpeedHi
+        lda player1XSpeedLo             ; Check if speed now exceeds maximum
+        cmp #<PLAYER_TOP_LEFT_SPEED     ; Sets carry flag for next SBC
+        lda player1XSpeedHi
+        sbc #>PLAYER_TOP_LEFT_SPEED
+        bvc :+              ; N eor V
+            eor #$80
+:       bpl @postHandleInput
+            lda #<PLAYER_TOP_LEFT_SPEED
+            sta player1XSpeedLo
+            lda #>PLAYER_TOP_LEFT_SPEED
+            sta player1XSpeedHi
+            bne @postHandleInput        ; Should be guaranteed branch
+@handleNoInput:
+    lda player1XSpeedLo                 ; Check speed is non-zero
+    bne :+
+        lda player1XSpeedHi
+        beq @postHandleInput
+:   lda player1XSpeedHi
+    bmi @handleNoInputNegSpeed
+        sec
+        lda player1XSpeedLo
+        sbc #<PLAYER_ACCELERATION
+        sta player1XSpeedLo
+        lda player1XSpeedHi
+        sbc #>PLAYER_ACCELERATION
+        bcc :+
+            lda #$00
+            sta player1XSpeedLo
+:       sta player1XSpeedHi
+        jmp @postHandleInput
+@handleNoInputNegSpeed:
+    clc
+    lda player1XSpeedLo
+    adc #<PLAYER_ACCELERATION
+    sta player1XSpeedLo
+    lda player1XSpeedHi
+    adc #>PLAYER_ACCELERATION
+    bcc :+
+        lda #$00
+        sta player1XSpeedLo
+:   sta player1XSpeedHi
+
 @postHandleInput:
 @movePlayer:
     lda player1XLo
