@@ -43,6 +43,10 @@ RESZP   player1XHi,         $01
 RESZP   player1XLo,         $01
 RESZP   player1YHi,         $01
 RESZP   player1YLo,         $01
+RESZP   player1XSpeedHi,    $01
+RESZP   player1XSpeedLo,    $01
+RESZP   player1YSpeedHi,    $01
+RESZP   player1YSpeedLo,    $01
 RESZP   player1Facing,      $01 ; 0 right, 1 left, 2 down, 3 up
 RESZP   player1State,       $01 ; 0 stand, 1 walking
 RESZP   player1StateTimer,  $01

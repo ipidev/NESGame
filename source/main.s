@@ -112,54 +112,7 @@ readJoypads:            ; Adapated from wiki.nesdev.com
 
     jsr updatePlayerState       ; Will eventually need consolidating
     jsr handlePlayerMovement
-    
-drawSprite:
-    ldy player1AnimIndex ; TODO: MOVE THIS!!
-    lda PLAYER_ANIMATION_INDICES, y
-    and #$7F
-    tay
-    
-    lda player1YHi       ; Scrolling sprite test, top-left
-    sta oamBuffer+0
-    lda METASPRITE_TL, y
-    sta oamBuffer+1
-    lda #$00
-    sta oamBuffer+2
-    lda player1XHi
-    sta oamBuffer+3
-    
-    lda player1YHi       ; Scrolling sprite test, top-right
-    sta oamBuffer+4
-    lda METASPRITE_TR, y
-    sta oamBuffer+5
-    lda #$00
-    sta oamBuffer+6
-    lda player1XHi
-    clc
-    adc #$08
-    sta oamBuffer+7
-    
-    lda player1YHi       ; Scrolling sprite test, bottom-left
-    adc #$08
-    sta oamBuffer+8
-    lda METASPRITE_BL, y
-    sta oamBuffer+9
-    lda #$00
-    sta oamBuffer+10
-    lda player1XHi
-    sta oamBuffer+11
-    
-    lda player1YHi       ; Scrolling sprite test, top-right
-    adc #$08
-    sta oamBuffer+12
-    lda METASPRITE_BR, y
-    sta oamBuffer+13
-    lda #$00
-    sta oamBuffer+14
-    lda player1XHi
-    clc
-    adc #$08
-    sta oamBuffer+15
+    jsr drawPlayerSprite
 
 @gameLoopComplete:
     lda #$01
