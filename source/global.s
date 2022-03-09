@@ -58,6 +58,12 @@ RESZP   player1AnimIndex,   $01
 
 RES     oamBuffer,          $100
 
+; Helpful aliases for accessing the OAM buffer
+OAM_BUFFER_Y_POSITION = oamBuffer+0
+OAM_BUFFER_TILE_INDEX = oamBuffer+1
+OAM_BUFFER_ATTRIBUTES = oamBuffer+2
+OAM_BUFFER_X_POSITION = oamBuffer+3
+
 .segment "RAM"
 
 ; EOF

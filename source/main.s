@@ -94,6 +94,10 @@ reset:
     sta PPUMASK     ; Show sprites and background
     cli             ; Enable interrupts
 
+    lda #$10
+    sta player1XHi
+    sta player1YHi
+
 gameLoop:
 readJoypads:            ; Adapated from wiki.nesdev.com
     lda #$01

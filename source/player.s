@@ -30,6 +30,18 @@ EXPORT_LABEL PLAYER_METASPRITE_BR
     .byte PLAYER_PATTERN_START + $08 ; Squashed
     .byte PLAYER_PATTERN_START + $0B ; Stretched
 
+PLAYER_OAM_ATTRIBTES:
+    .byte $00       ; Facing right
+    .byte $40       ; Facing left
+
+PLAYER_LEFTMOST_SPRITE_OFFSETS:
+    .byte $F8       ; Facing right
+    .byte $00       ; Facing left
+
+PLAYER_RIGHTMOST_SPRITE_OFFSETS:
+    .byte $00       ; Facing right
+    .byte $F8       ; Facing left
+
 PLAYER_ACCELERATION = $00C0
 PLAYER_TOP_RIGHT_SPEED = $0200
 PLAYER_TOP_LEFT_SPEED = ~PLAYER_TOP_RIGHT_SPEED + 1
@@ -134,6 +146,7 @@ EXPORT_LABEL handlePlayerMovement
 
 @postHandleInput:
 @movePlayer:
+    clc
     lda player1XLo
     adc player1XSpeedLo
     sta player1XLo
@@ -143,49 +156,64 @@ EXPORT_LABEL handlePlayerMovement
     rts
 
 EXPORT_LABEL drawPlayerSprite
+    ldy player1Facing
+    lda PLAYER_OAM_ATTRIBTES, y
+    sta tempA
+    lda PLAYER_LEFTMOST_SPRITE_OFFSETS, y
+    sta tempB
+    lda PLAYER_RIGHTMOST_SPRITE_OFFSETS, y
+    sta tempC
+
+    ldx #$04
     ldy player1AnimIndex
-    
-    lda player1YHi       ; Scrolling sprite test, top-left
-    sta oamBuffer+0
+
+    lda player1YHi          ; Top-left
+    sta OAM_BUFFER_Y_POSITION, x
     lda PLAYER_METASPRITE_TL, y
-    sta oamBuffer+1
-    lda #$00
-    sta oamBuffer+2
+    sta OAM_BUFFER_TILE_INDEX, x
+    lda tempA
+    sta OAM_BUFFER_ATTRIBUTES, x
+    clc
     lda player1XHi
-    sta oamBuffer+3
+    adc tempB
+    sta OAM_BUFFER_X_POSITION, x
     
-    lda player1YHi       ; Scrolling sprite test, top-right
-    sta oamBuffer+4
+    lda player1YHi          ; Top-right
+    sta OAM_BUFFER_Y_POSITION+4, x
     lda PLAYER_METASPRITE_TR, y
-    sta oamBuffer+5
-    lda #$00
-    sta oamBuffer+6
-    lda player1XHi
+    sta OAM_BUFFER_TILE_INDEX+4, x
+    lda tempA
+    sta OAM_BUFFER_ATTRIBUTES+4, x
     clc
-    adc #$08
-    sta oamBuffer+7
+    lda player1XHi
+    adc tempC
+    sta OAM_BUFFER_X_POSITION+4, x
     
-    lda player1YHi       ; Scrolling sprite test, bottom-left
+    clc
+    lda player1YHi          ; Bottom-left
     adc #$08
-    sta oamBuffer+8
+    sta OAM_BUFFER_Y_POSITION+8, x
     lda PLAYER_METASPRITE_BL, y
-    sta oamBuffer+9
-    lda #$00
-    sta oamBuffer+10
-    lda player1XHi
-    sta oamBuffer+11
-    
-    lda player1YHi       ; Scrolling sprite test, top-right
-    adc #$08
-    sta oamBuffer+12
-    lda PLAYER_METASPRITE_BR, y
-    sta oamBuffer+13
-    lda #$00
-    sta oamBuffer+14
-    lda player1XHi
+    sta OAM_BUFFER_TILE_INDEX+8, x
+    lda tempA
+    sta OAM_BUFFER_ATTRIBUTES+8, x
     clc
+    lda player1XHi
+    adc tempB
+    sta OAM_BUFFER_X_POSITION+8, x
+    
+    clc
+    lda player1YHi          ; Bottom-right
     adc #$08
-    sta oamBuffer+15
+    sta OAM_BUFFER_Y_POSITION+12, x
+    lda PLAYER_METASPRITE_BR, y
+    sta OAM_BUFFER_TILE_INDEX+12, x
+    lda tempA
+    sta OAM_BUFFER_ATTRIBUTES+12, x
+    clc
+    lda player1XHi
+    adc tempC
+    sta OAM_BUFFER_X_POSITION+12, x
     rts
 
 ; EOF
