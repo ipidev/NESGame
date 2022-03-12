@@ -45,6 +45,8 @@ PLAYER_RIGHTMOST_SPRITE_OFFSETS:
 PLAYER_ACCELERATION = $00C0
 PLAYER_TOP_RIGHT_SPEED = $0200
 PLAYER_TOP_LEFT_SPEED = ~PLAYER_TOP_RIGHT_SPEED + 1
+PLAYER_RIGHT_COLLISION_OFFSET = $07
+PLAYER_LEFT_COLLISION_OFFSET = $F9 ; Assembler thinks this is negative otherwise
 
 .enum PlayerState
     IDLE
@@ -127,7 +129,7 @@ EXPORT_LABEL handlePlayerMovement
         sta player1XSpeedLo
         lda player1XSpeedHi
         sbc #>PLAYER_ACCELERATION
-        bcc :+
+        bcc :+                          ; Clamp player speed to zero
             lda #$00
             sta player1XSpeedLo
 :       sta player1XSpeedHi
@@ -139,13 +141,13 @@ EXPORT_LABEL handlePlayerMovement
     sta player1XSpeedLo
     lda player1XSpeedHi
     adc #>PLAYER_ACCELERATION
-    bcc :+
+    bcc :+                          ; Clamp player speed to zero
         lda #$00
         sta player1XSpeedLo
 :   sta player1XSpeedHi
 
 @postHandleInput:
-@movePlayer:
+movePlayer:
     clc
     lda player1XLo
     adc player1XSpeedLo
@@ -153,6 +155,38 @@ EXPORT_LABEL handlePlayerMovement
     lda player1XHi
     adc player1XSpeedHi
     sta player1XHi
+
+@horizontalCollisionChecks:
+    lda player1XSpeedHi
+    beq @verticalCollisionChecks    ; Skip horizontal checks if not moving
+        bmi :+                      ; Select offset based off velocity
+            lda #PLAYER_RIGHT_COLLISION_OFFSET
+            bne :++                 ; Should be guaranteed branch
+:       lda #PLAYER_LEFT_COLLISION_OFFSET
+:       sta tempC                   ; Keep hold of the offset we choose
+        clc
+        adc player1XHi
+        sta tempA
+        sta tempD                   ; getMetaTileData clobbers the x-position
+        lda player1YHi
+        sta tempB
+        jsr getMetaTileData
+        beq @verticalCollisionChecks    ; Exit if there's no solid block here
+            lda tempD
+            and #$F0
+            bit tempC               ; Find the side of the block closest to us
+            bpl :+
+                clc
+                adc #$10
+:           sec
+            sbc tempC               ; Move outside the block
+            sta player1XHi
+            lda #$00
+            sta player1XLo
+            sta player1XSpeedHi
+            sta player1XSpeedLo
+@verticalCollisionChecks:
+
     rts
 
 EXPORT_LABEL drawPlayerSprite

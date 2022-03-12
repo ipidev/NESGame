@@ -92,4 +92,20 @@ EXPORT_LABEL renderAllLevelLayout
     bcc @writeMetaTileRow
     rts
 
+; tempA contains X-position, tempB contains Y-position (in pixels).
+; Returns metatile data in A, clobbers tempA and X
+EXPORT_LABEL getMetaTileData
+    lda tempA
+    lsr
+    lsr
+    lsr
+    lsr
+    sta tempA
+    lda tempB
+    and #$F0
+    ora tempA
+    tax
+    lda levelLayout, x
+    rts
+
 ; EOF
