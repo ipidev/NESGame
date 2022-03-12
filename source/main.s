@@ -87,9 +87,13 @@ reset:
     inx
     cpx #$20
     bne @loadTestPalettes
+
+    jsr loadTestLevel
+    jsr renderAllLevelLayout
     
     lda #%10001100
     sta PPUCTRL     ; Enable PPU NMI, sprites use pattern table 1
+    sta ppuCtrlCache
     lda #%00011110
     sta PPUMASK     ; Show sprites and background
     cli             ; Enable interrupts
@@ -137,12 +141,23 @@ nmi:
     
     lda gameLoopFlag
     beq @exitNMI    ; Exit immediately if game loop has not finished yet
-    
-    lda #$00        ; Perform OAM buffer transfer
-    sta OAMADDR
+
+    lda #$00
+    sta PPUMASK     ; Disable rendering during NMI
+
+    sta OAMADDR     ; Perform OAM buffer transfer
     lda #>oamBuffer
     sta OAMDMA
-    
+
+    lda PPUSTATUS   ; Set scroll position
+    lda scrollXLo
+    sta PPUSCROLL
+    lda scrollYLo
+    sta PPUSCROLL
+
+    lda #%00011110
+    sta PPUMASK     ; Re-enable rendering
+
     lda #$00    ; Reset game loop flag
     sta gameLoopFlag
     

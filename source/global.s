@@ -36,6 +36,7 @@ RESZP   tempPtrC,           $02
 RESZP   tempPtrD,           $02
 
 RESZP   gameLoopFlag,       $01 ; 0 while game is running, 1 while spinning
+RESZP   ppuCtrlCache,       $01
 
 RESZP   player1Buttons,     $01
 RESZP   player2Buttons,     $01
@@ -52,6 +53,9 @@ RESZP   player1State,       $01 ; 0 stand, 1 walking
 RESZP   player1StateTimer,  $01
 RESZP   player1AnimIndex,   $01
 
+RESZP   scrollXLo,          $01
+RESZP   scrollYLo,          $01
+
 .segment "STACK"
 
 .segment "OAM"
@@ -65,5 +69,10 @@ OAM_BUFFER_ATTRIBUTES = oamBuffer+2
 OAM_BUFFER_X_POSITION = oamBuffer+3
 
 .segment "RAM"
+
+LEVEL_LAYOUT_SIZE = 16*14
+RES     levelLayout,        LEVEL_LAYOUT_SIZE
+
+
 
 ; EOF

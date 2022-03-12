@@ -16,7 +16,7 @@ PYTHON = python
 BUILD_DIR = ..\build
 
 # List of source files
-SOURCES = main.s player.s
+SOURCES = main.s player.s level.s
 OBJECTS = $(addprefix $(BUILD_DIR)\,$(SOURCES:.s=.o))
 
 # Files whose symbols are only exported once (built with EXPORT_GLOBALS set)

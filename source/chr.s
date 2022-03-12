@@ -2,6 +2,9 @@
 ; Sean Latham, 2020
 
 .segment "PATTERN0"
+    .incbin "graphics/level.bin"
+
+    .align $100
     .incbin "graphics/font.bin"
 
 .segment "PATTERN1"
