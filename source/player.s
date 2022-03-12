@@ -45,8 +45,12 @@ PLAYER_RIGHTMOST_SPRITE_OFFSETS:
 PLAYER_ACCELERATION = $00C0
 PLAYER_TOP_RIGHT_SPEED = $0200
 PLAYER_TOP_LEFT_SPEED = ~PLAYER_TOP_RIGHT_SPEED + 1
-PLAYER_RIGHT_COLLISION_OFFSET = $07
-PLAYER_LEFT_COLLISION_OFFSET = $F9 ; Assembler thinks this is negative otherwise
+PLAYER_TOP_FALL_SPEED = $0480
+PLAYER_POSITIVE_COLLISION_OFFSET = $07
+PLAYER_NEGATIVE_COLLISION_OFFSET = $F9 ; Can't seem to negate byte literals?
+PLAYER_JUMP_SPEED = ~$0480 + 1
+PLAYER_JUMP_DECELERATION = $00C0
+PLAYER_GRAVITY = $0040
 
 .enum PlayerState
     IDLE
@@ -85,12 +89,12 @@ EXPORT_LABEL handlePlayerMovement
         sbc #>PLAYER_TOP_RIGHT_SPEED
         bvc :+              ; N eor V
             eor #$80
-:       bmi @postHandleInput
+:       bmi @checkJump
             lda #<PLAYER_TOP_RIGHT_SPEED
             sta player1XSpeedLo
             lda #>PLAYER_TOP_RIGHT_SPEED
             sta player1XSpeedHi
-            bne @postHandleInput        ; Should be guaranteed branch
+            bne @checkJump        ; Should be guaranteed branch
 @checkLeft:
     lda player1Buttons
     and #BUTTON_LEFT
@@ -110,17 +114,17 @@ EXPORT_LABEL handlePlayerMovement
         sbc #>PLAYER_TOP_LEFT_SPEED
         bvc :+              ; N eor V
             eor #$80
-:       bpl @postHandleInput
+:       bpl @checkJump
             lda #<PLAYER_TOP_LEFT_SPEED
             sta player1XSpeedLo
             lda #>PLAYER_TOP_LEFT_SPEED
             sta player1XSpeedHi
-            bne @postHandleInput        ; Should be guaranteed branch
+            bne @checkJump        ; Should be guaranteed branch
 @handleNoInput:
     lda player1XSpeedLo                 ; Check speed is non-zero
     bne :+
         lda player1XSpeedHi
-        beq @postHandleInput
+        beq @checkJump
 :   lda player1XSpeedHi
     bmi @handleNoInputNegSpeed
         sec
@@ -133,7 +137,7 @@ EXPORT_LABEL handlePlayerMovement
             lda #$00
             sta player1XSpeedLo
 :       sta player1XSpeedHi
-        jmp @postHandleInput
+        jmp @checkJump
 @handleNoInputNegSpeed:
     clc
     lda player1XSpeedLo
@@ -145,9 +149,52 @@ EXPORT_LABEL handlePlayerMovement
         lda #$00
         sta player1XSpeedLo
 :   sta player1XSpeedHi
+@checkJump:
+    bit player1Buttons      ; Check A button (bit 7)
+    bpl @notPressingJump
+        lda player1Airborne
+        bne @applyGravity
+            lda #<PLAYER_JUMP_SPEED ; Trigger jump
+            sta player1YSpeedLo
+            lda #>PLAYER_JUMP_SPEED
+            sta player1YSpeedHi
+            bne @applyGravity       ; Should be guaranteed branch
+@notPressingJump:
+    lda player1Airborne
+    beq @applyGravity
+        bit player1YSpeedHi
+        bpl @applyGravity
+            clc
+            lda player1YSpeedLo
+            adc #<PLAYER_JUMP_DECELERATION  ; Decelerate while A button released
+            sta player1YSpeedLo
+            lda player1YSpeedHi
+            adc #>PLAYER_JUMP_DECELERATION
+            sta player1YSpeedHi
+            bne @applyGravity               ; Should be guaranteed branch
+@applyGravity:
+    clc
+    lda player1YSpeedLo     ; Always apply gravity, even while on the ground
+    adc #<PLAYER_GRAVITY
+    sta player1YSpeedLo
+    lda player1YSpeedHi
+    adc #>PLAYER_GRAVITY
+    sta player1YSpeedHi
+    lda player1YSpeedLo             ; Check if speed now exceeds maximum
+    cmp #<PLAYER_TOP_FALL_SPEED     ; Sets carry flag for next SBC
+    lda player1YSpeedHi
+    sbc #>PLAYER_TOP_FALL_SPEED
+    bvc :+              ; N eor V
+        eor #$80
+:   bmi movePlayer
+        lda #<PLAYER_TOP_FALL_SPEED
+        sta player1YSpeedLo
+        lda #>PLAYER_TOP_FALL_SPEED
+        sta player1YSpeedHi
+    ; Fallthrough to movePlayer
 
-@postHandleInput:
 movePlayer:
+@horizontalMovement:
     clc
     lda player1XLo
     adc player1XSpeedLo
@@ -155,14 +202,13 @@ movePlayer:
     lda player1XHi
     adc player1XSpeedHi
     sta player1XHi
-
 @horizontalCollisionChecks:
     lda player1XSpeedHi
-    beq @verticalCollisionChecks    ; Skip horizontal checks if not moving
+    beq @verticalMovement           ; Skip horizontal checks if not moving
         bmi :+                      ; Select offset based off velocity
-            lda #PLAYER_RIGHT_COLLISION_OFFSET
+            lda #PLAYER_POSITIVE_COLLISION_OFFSET
             bne :++                 ; Should be guaranteed branch
-:       lda #PLAYER_LEFT_COLLISION_OFFSET
+:       lda #PLAYER_NEGATIVE_COLLISION_OFFSET
 :       sta tempC                   ; Keep hold of the offset we choose
         clc
         adc player1XHi
@@ -171,7 +217,7 @@ movePlayer:
         lda player1YHi
         sta tempB
         jsr getMetaTileData
-        beq @verticalCollisionChecks    ; Exit if there's no solid block here
+        beq @verticalMovement       ; Exit if there's no solid block here
             lda tempD
             and #$F0
             bit tempC               ; Find the side of the block closest to us
@@ -185,8 +231,49 @@ movePlayer:
             sta player1XLo
             sta player1XSpeedHi
             sta player1XSpeedLo
-@verticalCollisionChecks:
 
+@verticalMovement:
+    lda player1YLo
+    adc player1YSpeedLo
+    sta player1YLo
+    lda player1YHi
+    adc player1YSpeedHi
+    sta player1YHi
+@verticalCollisionChecks:
+    bit player1YSpeedHi         ; Assume we're always moving vertically
+    bmi :+                      ; Select offset based off velocity
+        lda #PLAYER_POSITIVE_COLLISION_OFFSET
+        bne :++                 ; Should be guaranteed branch
+:       lda #PLAYER_NEGATIVE_COLLISION_OFFSET
+:       sta tempC               ; Keep hold of the offset we choose
+    clc
+    adc player1YHi
+    sta tempB
+    lda player1XHi
+    sta tempA
+    jsr getMetaTileData
+    beq @isAirborne             ; Skip if there's no solid block here
+        lda tempB
+        and #$F0
+        bit tempC               ; Find the side of the block closest to us
+        bpl :+
+            clc
+            adc #$10
+:           sec
+        sbc tempC               ; Move outside the block
+        sta player1YHi
+        lda #$00
+        sta player1YLo
+        sta player1YSpeedHi
+        sta player1YSpeedLo
+        bit tempC               ; Only clear airborne flag if landing from above
+        bmi @exit
+            sta player1Airborne
+            beq @exit           ; Should be guaranteed branch
+@isAirborne:
+    lda #$01
+    sta player1Airborne
+@exit:
     rts
 
 EXPORT_LABEL drawPlayerSprite
@@ -201,7 +288,9 @@ EXPORT_LABEL drawPlayerSprite
     ldx #$04
     ldy player1AnimIndex
 
+    sec
     lda player1YHi          ; Top-left
+    sbc #$09
     sta OAM_BUFFER_Y_POSITION, x
     lda PLAYER_METASPRITE_TL, y
     sta OAM_BUFFER_TILE_INDEX, x
@@ -212,7 +301,9 @@ EXPORT_LABEL drawPlayerSprite
     adc tempB
     sta OAM_BUFFER_X_POSITION, x
     
+    sec
     lda player1YHi          ; Top-right
+    sbc #$09
     sta OAM_BUFFER_Y_POSITION+4, x
     lda PLAYER_METASPRITE_TR, y
     sta OAM_BUFFER_TILE_INDEX+4, x
@@ -223,9 +314,9 @@ EXPORT_LABEL drawPlayerSprite
     adc tempC
     sta OAM_BUFFER_X_POSITION+4, x
     
-    clc
+    sec
     lda player1YHi          ; Bottom-left
-    adc #$08
+    sbc #$01
     sta OAM_BUFFER_Y_POSITION+8, x
     lda PLAYER_METASPRITE_BL, y
     sta OAM_BUFFER_TILE_INDEX+8, x
@@ -236,9 +327,9 @@ EXPORT_LABEL drawPlayerSprite
     adc tempB
     sta OAM_BUFFER_X_POSITION+8, x
     
-    clc
+    sec
     lda player1YHi          ; Bottom-right
-    adc #$08
+    sbc #$01
     sta OAM_BUFFER_Y_POSITION+12, x
     lda PLAYER_METASPRITE_BR, y
     sta OAM_BUFFER_TILE_INDEX+12, x
