@@ -154,12 +154,18 @@ EXPORT_LABEL handlePlayerMovement
     bpl @notPressingJump
         lda player1Airborne
         bne @applyGravity
-            lda #<PLAYER_JUMP_SPEED ; Trigger jump
-            sta player1YSpeedLo
-            lda #>PLAYER_JUMP_SPEED
-            sta player1YSpeedHi
-            bne @applyGravity       ; Should be guaranteed branch
+            lda player1JumpDebounce
+            bne @applyGravity
+                lda #<PLAYER_JUMP_SPEED ; Trigger jump
+                sta player1YSpeedLo
+                lda #>PLAYER_JUMP_SPEED
+                sta player1YSpeedHi
+                lda #$01
+                sta player1JumpDebounce
+                bne @applyGravity       ; Should be guaranteed branch
 @notPressingJump:
+    lda #$00
+    sta player1JumpDebounce
     lda player1Airborne
     beq @applyGravity
         bit player1YSpeedHi
