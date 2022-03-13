@@ -98,7 +98,7 @@ reset:
     sta PPUMASK     ; Show sprites and background
     cli             ; Enable interrupts
 
-    lda #$10
+    lda #$18
     sta player1XHi
     sta player1YHi
 

@@ -52,6 +52,14 @@ PLAYER_JUMP_SPEED = ~$0480 + 1
 PLAYER_JUMP_DECELERATION = $00C0
 PLAYER_GRAVITY = $0040
 
+PLAYER_HORIZONTAL_COLLISION_OFFSETS:
+    .byte PLAYER_NEGATIVE_COLLISION_OFFSET
+    .byte PLAYER_POSITIVE_COLLISION_OFFSET - 1  ; Avoid clipping with ground
+
+PLAYER_VERTICAL_COLLISION_OFFSETS:
+    .byte PLAYER_NEGATIVE_COLLISION_OFFSET
+    .byte PLAYER_POSITIVE_COLLISION_OFFSET - 1  ; Avoid clipping with wall
+
 .enum PlayerState
     IDLE
     JUMPING
@@ -152,8 +160,8 @@ EXPORT_LABEL handlePlayerMovement
 @checkJump:
     bit player1Buttons      ; Check A button (bit 7)
     bpl @notPressingJump
-        lda player1Airborne
-        bne @applyGravity
+        lda player1Grounded
+        beq @applyGravity
             lda player1JumpDebounce
             bne @applyGravity
                 lda #<PLAYER_JUMP_SPEED ; Trigger jump
@@ -166,8 +174,8 @@ EXPORT_LABEL handlePlayerMovement
 @notPressingJump:
     lda #$00
     sta player1JumpDebounce
-    lda player1Airborne
-    beq @applyGravity
+    lda player1Grounded
+    bne @applyGravity
         bit player1YSpeedHi
         bpl @applyGravity
             clc
@@ -200,7 +208,7 @@ EXPORT_LABEL handlePlayerMovement
     ; Fallthrough to movePlayer
 
 movePlayer:
-@horizontalMovement:
+movePlayerHorizontally:
     clc
     lda player1XLo
     adc player1XSpeedLo
@@ -208,22 +216,30 @@ movePlayer:
     lda player1XHi
     adc player1XSpeedHi
     sta player1XHi
-@horizontalCollisionChecks:
     lda player1XSpeedHi
-    beq @verticalMovement           ; Skip horizontal checks if not moving
+    bne @determineOffset
+        lda player1XSpeedLo
+        bne @usePositiveOffset      ; Always +ve with non-zero lo and zero hi
+        beq movePlayerVertically    ; Skip horizontal checks if not moving
+@determineOffset:
         bmi :+                      ; Select offset based off velocity
+@usePositiveOffset:
             lda #PLAYER_POSITIVE_COLLISION_OFFSET
             bne :++                 ; Should be guaranteed branch
 :       lda #PLAYER_NEGATIVE_COLLISION_OFFSET
 :       sta tempC                   ; Keep hold of the offset we choose
         clc
         adc player1XHi
-        sta tempA
         sta tempD                   ; getMetaTileData clobbers the x-position
+        ldy #$01
+@collisionCheckLoopStart:
+        sta tempA                   ; We reload tempD at the end of the loop
+        clc
         lda player1YHi
+        adc PLAYER_HORIZONTAL_COLLISION_OFFSETS, y  ; Check top/bottom of player
         sta tempB
         jsr getMetaTileData
-        beq @verticalMovement       ; Exit if there's no solid block here
+        beq @collisionCheckLoopEnd  ; Exit if there's no solid block here
             lda tempD
             and #$F0
             bit tempC               ; Find the side of the block closest to us
@@ -237,25 +253,42 @@ movePlayer:
             sta player1XLo
             sta player1XSpeedHi
             sta player1XSpeedLo
+            beq movePlayerVertically    ; Should be guaranteed branch
+@collisionCheckLoopEnd:
+        lda tempD
+        dey
+        bpl @collisionCheckLoopStart
+    ; Fallthrough to movePlayerVertically
 
-@verticalMovement:
+movePlayerVertically:
     lda player1YLo
     adc player1YSpeedLo
     sta player1YLo
     lda player1YHi
     adc player1YSpeedHi
     sta player1YHi
-@verticalCollisionChecks:
-    bit player1YSpeedHi         ; Assume we're always moving vertically
+    lda #$00
+    sta player1Grounded
+    lda player1YSpeedHi
+    bne @determineOffset
+        lda player1YSpeedLo
+        bne @usePositiveOffset  ; Always +ve with non-zero lo and zero hi
+        beq @exit               ; Skip vertical checks if not moving
+@determineOffset:
     bmi :+                      ; Select offset based off velocity
+@usePositiveOffset:
         lda #PLAYER_POSITIVE_COLLISION_OFFSET
         bne :++                 ; Should be guaranteed branch
-:       lda #PLAYER_NEGATIVE_COLLISION_OFFSET
-:       sta tempC               ; Keep hold of the offset we choose
+:   lda #PLAYER_NEGATIVE_COLLISION_OFFSET
+:   sta tempC                   ; Keep hold of the offset we choose
     clc
     adc player1YHi
     sta tempB
+    ldy #$01
+@collisionCheckLoopStart:
+    clc
     lda player1XHi
+    adc PLAYER_VERTICAL_COLLISION_OFFSETS, y    ; Check left/right of player
     sta tempA
     jsr getMetaTileData
     beq @isAirborne             ; Skip if there's no solid block here
@@ -272,13 +305,14 @@ movePlayer:
         sta player1YLo
         sta player1YSpeedHi
         sta player1YSpeedLo
-        bit tempC               ; Only clear airborne flag if landing from above
-        bmi @exit
-            sta player1Airborne
-            beq @exit           ; Should be guaranteed branch
+        bit tempC               ; Only count landing if falling from above
+        bmi @collisionCheckLoopEnd
+            inc player1Grounded
+            beq @collisionCheckLoopEnd  ; Should be guaranteed branch
 @isAirborne:
-    lda #$01
-    sta player1Airborne
+@collisionCheckLoopEnd:
+    dey
+    bpl @collisionCheckLoopStart
 @exit:
     rts
 

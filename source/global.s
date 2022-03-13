@@ -52,7 +52,7 @@ RESZP   player1Facing,      $01 ; 0 right, 1 left, 2 down, 3 up
 RESZP   player1State,       $01 ; 0 stand, 1 walking
 RESZP   player1StateTimer,  $01
 RESZP   player1AnimIndex,   $01
-RESZP   player1Airborne,    $01
+RESZP   player1Grounded,    $01
 RESZP   player1JumpDebounce,$01
 
 RESZP   scrollXLo,          $01
