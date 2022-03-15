@@ -38,6 +38,9 @@ PRG_CFG = prg.cfg
 PRG_BIN = $(BUILD_DIR)\$(PRG_CFG:.cfg=.bin)
 PRG_LABELS = $(BUILD_DIR)\$(PRG_CFG:.cfg=.labels.txt)
 
+# Symbols provided to each file
+BUILD_SYMBOLS :=
+
 # Support for string substitution
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
@@ -45,6 +48,9 @@ SPACE := $(EMPTY) $(EMPTY)
 # TARGETS
 .PHONY: all
 all : directories $(GAME)
+
+debug : BUILD_SYMBOLS += -D DEBUG
+debug : all
 
 $(GAME) : $(HEADER_BIN) $(PRG_BIN) $(CHR_BIN) FCEUX_SYMBOLS
 	$(COPY) $(subst $(SPACE),+,$^) $(GAME)
@@ -62,16 +68,16 @@ FCEUX_SYMBOLS : $(PRG_BIN)
 	$(PYTHON) exportFCEUXsymbols.py $(PRG_LABELS) $(GAME)
 
 $(GLOBALS_OBJECTS) : $(GLOBALS)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U -D EXPORT_GLOBALS -o $@
+	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U $(BUILD_SYMBOLS) -D EXPORT_GLOBALS -o $@
 
 $(HEADER_OBJ) : $(HEADER)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U -o $@
+	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U $(BUILD_SYMBOLS) -o $@
 
 $(CHR_OBJ) : $(CHR)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U -o $@
+	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U $(BUILD_SYMBOLS) -o $@
 
 $(OBJECTS) : $(SOURCES)
-	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U -o $@
+	$(CA65) $(notdir $(subst .o,.s,$@)) -g -U $(BUILD_SYMBOLS) -o $@
 
 # Make build directory if it doesn't exist
 .PHONY: directories

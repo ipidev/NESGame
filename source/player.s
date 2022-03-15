@@ -102,7 +102,7 @@ EXPORT_LABEL handlePlayerMovement
             sta player1XSpeedLo
             lda #>PLAYER_TOP_RIGHT_SPEED
             sta player1XSpeedHi
-            bne @checkJump        ; Should be guaranteed branch
+            GUARANTEED_BNE @checkJump, >PLAYER_TOP_RIGHT_SPEED
 @checkLeft:
     lda player1Buttons
     and #BUTTON_LEFT
@@ -127,7 +127,7 @@ EXPORT_LABEL handlePlayerMovement
             sta player1XSpeedLo
             lda #>PLAYER_TOP_LEFT_SPEED
             sta player1XSpeedHi
-            bne @checkJump        ; Should be guaranteed branch
+            GUARANTEED_BNE @checkJump, >PLAYER_TOP_LEFT_SPEED
 @handleNoInput:
     lda player1XSpeedLo                 ; Check speed is non-zero
     bne :+
@@ -170,7 +170,7 @@ EXPORT_LABEL handlePlayerMovement
                 sta player1YSpeedHi
                 lda #$01
                 sta player1JumpDebounce
-                bne @applyGravity       ; Should be guaranteed branch
+                GUARANTEED_BNE @applyGravity, $01
 @notPressingJump:
     lda #$00
     sta player1JumpDebounce
@@ -185,7 +185,6 @@ EXPORT_LABEL handlePlayerMovement
             lda player1YSpeedHi
             adc #>PLAYER_JUMP_DECELERATION
             sta player1YSpeedHi
-            bne @applyGravity               ; Should be guaranteed branch
 @applyGravity:
     clc
     lda player1YSpeedLo     ; Always apply gravity, even while on the ground
@@ -253,7 +252,7 @@ movePlayerHorizontally:
             sta player1XLo
             sta player1XSpeedHi
             sta player1XSpeedLo
-            beq movePlayerVertically    ; Should be guaranteed branch
+            GUARANTEED_BEQ movePlayerVertically, $00
 @collisionCheckLoopEnd:
         lda tempD
         dey
@@ -308,7 +307,7 @@ movePlayerVertically:
         bit tempC               ; Only count landing if falling from above
         bmi @collisionCheckLoopEnd
             inc player1Grounded
-            beq @collisionCheckLoopEnd  ; Should be guaranteed branch
+            GUARANTEED_BNE @collisionCheckLoopEnd
 @isAirborne:
 @collisionCheckLoopEnd:
     dey

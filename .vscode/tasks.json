@@ -4,7 +4,9 @@
         {
             "label": "Build",
             "command": "make",
-            "args": [],
+            "args": [
+                "debug"
+            ],
             "type": "shell",
             "options": {
                 "cwd": "${workspaceFolder}/source"
