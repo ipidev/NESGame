@@ -71,6 +71,10 @@ PLAYER_VERTICAL_COLLISION_OFFSETS:
     LEFT
 .endenum
 
+; Offset between x-axis data and y-axis data for player.
+; Can be used as an index for collision functions that handle both axes
+PLAYER_POSITION_AXIS_OFFSET = player1YLo - player1XLo
+
 .segment "CODE"
 
 EXPORT_LABEL updatePlayerState
@@ -206,7 +210,17 @@ EXPORT_LABEL handlePlayerMovement
         sta player1YSpeedHi
     ; Fallthrough to movePlayer
 
+
 movePlayer:
+.scope
+; Setup local aliases (we clobber a lot)
+tempXPos = tempA    ; Clobbered within this scope
+tempYPos = tempB
+tempCollisionOffset = tempC
+tempXPosMirror = tempD
+tempLastLayoutIndex = tempE
+tempLastBlockIndex = tempF
+
 movePlayerHorizontally:
     clc
     lda player1XLo
@@ -215,6 +229,8 @@ movePlayerHorizontally:
     lda player1XHi
     adc player1XSpeedHi
     sta player1XHi
+    lda #$00
+    sta tempLastLayoutIndex         ; Cache the index of the blocks we hit
     lda player1XSpeedHi
     bne @determineOffset
         lda player1XSpeedLo
@@ -226,35 +242,37 @@ movePlayerHorizontally:
             lda #PLAYER_POSITIVE_COLLISION_OFFSET
             bne :++                 ; Should be guaranteed branch
 :       lda #PLAYER_NEGATIVE_COLLISION_OFFSET
-:       sta tempC                   ; Keep hold of the offset we choose
+:       sta tempCollisionOffset     ; Keep hold of the offset we choose
         clc
         adc player1XHi
-        sta tempD                   ; getMetaTileData clobbers the x-position
+        sta tempXPosMirror          ; getMetaTileData clobbers the x-position
         ldy #$01
 @collisionCheckLoopStart:
-        sta tempA                   ; We reload tempD at the end of the loop
+        sta tempXPos                ; We reload tempD at the end of the loop
         clc
         lda player1YHi
         adc PLAYER_HORIZONTAL_COLLISION_OFFSETS, y  ; Check top/bottom of player
-        sta tempB
-        jsr getMetaTileData
-        beq @collisionCheckLoopEnd  ; Exit if there's no solid block here
-            lda tempD
-            and #$F0
-            bit tempC               ; Find the side of the block closest to us
-            bpl :+
-                clc
-                adc #$10
-:           sec
-            sbc tempC               ; Move outside the block
-            sta player1XHi
-            lda #$00
-            sta player1XLo
-            sta player1XSpeedHi
-            sta player1XSpeedLo
-            GUARANTEED_BEQ movePlayerVertically, $00
+        sta tempYPos
+        jsr getLevelLayoutIndexAtPos
+        cmp tempLastLayoutIndex
+        beq @collisionCheckLoopEnd  ; Skip if we've already hit this block
+            sta tempLastLayoutIndex
+            tax
+            lda levelLayout, x      ; Which block is this?
+            sta tempLastBlockIndex
+            beq @collisionCheckLoopEnd  ; Is there no block?
+                cmp #$01                ; Is there a solid block?
+                bne @setupCollisionWithSpike
+                    lda tempXPosMirror
+                    ldx #$00
+                    jsr resolveBlockCollision
+                    jmp @collisionCheckLoopEnd
+@setupCollisionWithSpike:
+                sec
+                sbc #$02
+                ; jsr
 @collisionCheckLoopEnd:
-        lda tempD
+        lda tempXPosMirror
         dey
         bpl @collisionCheckLoopStart
     ; Fallthrough to movePlayerVertically
@@ -268,6 +286,7 @@ movePlayerVertically:
     sta player1YHi
     lda #$00
     sta player1Grounded
+    sta tempLastBlockIndex      ; Cache the index of the blocks we hit
     lda player1YSpeedHi
     bne @determineOffset
         lda player1YSpeedLo
@@ -279,41 +298,64 @@ movePlayerVertically:
         lda #PLAYER_POSITIVE_COLLISION_OFFSET
         bne :++                 ; Should be guaranteed branch
 :   lda #PLAYER_NEGATIVE_COLLISION_OFFSET
-:   sta tempC                   ; Keep hold of the offset we choose
+:   sta tempCollisionOffset     ; Keep hold of the offset we choose
     clc
     adc player1YHi
-    sta tempB
+    sta tempYPos
     ldy #$01
 @collisionCheckLoopStart:
     clc
     lda player1XHi
     adc PLAYER_VERTICAL_COLLISION_OFFSETS, y    ; Check left/right of player
-    sta tempA
-    jsr getMetaTileData
-    beq @isAirborne             ; Skip if there's no solid block here
-        lda tempB
-        and #$F0
-        bit tempC               ; Find the side of the block closest to us
-        bpl :+
-            clc
-            adc #$10
-:           sec
-        sbc tempC               ; Move outside the block
-        sta player1YHi
-        lda #$00
-        sta player1YLo
-        sta player1YSpeedHi
-        sta player1YSpeedLo
-        bit tempC               ; Only count landing if falling from above
-        bmi @collisionCheckLoopEnd
-            inc player1Grounded
-            GUARANTEED_BNE @collisionCheckLoopEnd
-@isAirborne:
+    sta tempXPos
+    jsr getLevelLayoutIndexAtPos
+    cmp tempLastLayoutIndex
+    beq @collisionCheckLoopEnd  ; Skip if we've already hit this block
+        sta tempLastLayoutIndex
+        tax
+        lda levelLayout, x      ; Which block is this?
+        sta tempLastBlockIndex
+        beq @collisionCheckLoopEnd  ; Is there no block?
+            cmp #$01                ; Is there a solid block?
+            bne @setupCollisionWithSpike
+                lda tempYPos
+                ldx #PLAYER_POSITION_AXIS_OFFSET
+                jsr resolveBlockCollision
+                jmp @collisionCheckLoopEnd
+@setupCollisionWithSpike:
+            sec
+            sbc #$02
+            ; jsr
 @collisionCheckLoopEnd:
     dey
     bpl @collisionCheckLoopStart
 @exit:
     rts
+
+; Call with X set to either 0 (x-axis) or the offset between y and x-axis data
+; A should be set to the tested position along the given collision axis
+; tempC should contain the collision offset calculated based on speed
+resolveBlockCollision:
+    and #$F0
+    bit tempCollisionOffset     ; Find the side of the block closest to us
+    bpl :+
+        clc
+        adc #$10
+:   sec
+    sbc tempCollisionOffset     ; Move outside the block
+    sta player1XHi, x
+    lda #$00
+    sta player1XLo, x
+    sta player1XSpeedHi, x
+    sta player1XSpeedLo, x
+    cpx #$00
+    beq @exit
+        bit tempCollisionOffset     ; Only count landing if falling from above
+        bmi @exit
+            inc player1Grounded
+@exit:
+    rts
+.endscope
 
 EXPORT_LABEL drawPlayerSprite
     ldy player1Facing

@@ -94,7 +94,15 @@ EXPORT_LABEL renderAllLevelLayout
 
 ; tempA contains X-position, tempB contains Y-position (in pixels).
 ; Returns metatile data in A, clobbers tempA and X
-EXPORT_LABEL getMetaTileData
+EXPORT_LABEL getMetaTileDataAtPos
+    jsr getLevelLayoutIndexAtPos
+    tax
+    lda levelLayout, x
+    rts
+
+; tempA contains X-position, tempB contains Y-position (in pixels).
+; Returns metatile data in A, clobbers tempA
+EXPORT_LABEL getLevelLayoutIndexAtPos
     lda tempA
     lsr
     lsr
@@ -104,8 +112,6 @@ EXPORT_LABEL getMetaTileData
     lda tempB
     and #$F0
     ora tempA
-    tax
-    lda levelLayout, x
     rts
 
 ; EOF
