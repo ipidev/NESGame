@@ -122,6 +122,10 @@ readJoypads:            ; Adapated from wiki.nesdev.com
     jsr handlePlayerMovement
     jsr drawPlayerSprite
 
+.ifdef DEBUG
+    jsr debug_drawArrows
+.endif
+
 @gameLoopComplete:
     lda #$01
     sta gameLoopFlag

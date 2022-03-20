@@ -72,6 +72,26 @@
     .endif
 .endmacro
 
+; ------------------------------ DEBUG MACROS ------------------------------
+.ifdef DEBUG
+
+; Helper macro for loading position from arbitrary memory locations
+.macro DEBUG_ADD_ARROW xPos, yPos
+    php
+    pha
+    lda xPos
+    pha
+    lda yPos
+    pha
+    jsr debug_addArrow
+    pla
+    pla
+    pla
+    plp
+.endmacro
+
+.endif  ; DEBUG
+
 .endif  ; MACROS_INC
 
 ; EOF

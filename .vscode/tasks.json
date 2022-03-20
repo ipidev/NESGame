@@ -5,7 +5,7 @@
             "label": "Build",
             "command": "make",
             "args": [
-                "debug"
+                "debugBuild"
             ],
             "type": "shell",
             "options": {

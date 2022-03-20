@@ -10,4 +10,9 @@
 .segment "PATTERN1"
     .incbin "graphics/player.bin"
 
+.ifdef DEBUG
+    .align $100
+    .incbin "graphics/debug.bin"
+.endif
+
 ; EOF

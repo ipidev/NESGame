@@ -16,7 +16,7 @@ PYTHON = python
 BUILD_DIR = ..\build
 
 # List of source files
-SOURCES = main.s player.s level.s
+SOURCES = main.s player.s level.s debug.s
 OBJECTS = $(addprefix $(BUILD_DIR)\,$(SOURCES:.s=.o))
 
 # Files whose symbols are only exported once (built with EXPORT_GLOBALS set)
@@ -49,8 +49,8 @@ SPACE := $(EMPTY) $(EMPTY)
 .PHONY: all
 all : directories $(GAME)
 
-debug : BUILD_SYMBOLS += -D DEBUG
-debug : all
+debugBuild : BUILD_SYMBOLS += -D DEBUG
+debugBuild : all
 
 $(GAME) : $(HEADER_BIN) $(PRG_BIN) $(CHR_BIN) FCEUX_SYMBOLS
 	$(COPY) $(subst $(SPACE),+,$^) $(GAME)

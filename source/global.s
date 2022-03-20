@@ -78,6 +78,12 @@ OAM_BUFFER_X_POSITION = oamBuffer+3
 LEVEL_LAYOUT_SIZE = 16*14
 RES     levelLayout,        LEVEL_LAYOUT_SIZE
 
+.align $100
 
+.ifdef DEBUG
+RES     debug_arrowCount,   $01
+RES     debug_arrowXPos,    $04
+RES     debug_arrowYPos,    $04
+.endif
 
 ; EOF
